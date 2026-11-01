@@ -8,7 +8,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dados import AMOSTRA_MINIMA, pico_semana_hora
+from dados import AMOSTRA_MINIMA, DIA_FOLGA, DIA_UTIL, MESES, pico_semana_hora
 
 # --------- PALETA BTG --------------------
 AZUL_1 = "#05132A"
@@ -51,6 +51,11 @@ def fmt_int(valor):
 def fmt_pct(valor):
     """7.17 -> '7,2%'"""
     return f"{valor:.1f}%".replace(".", ",")
+
+
+def fmt_dec(valor):
+    """14.68 -> '14,7'"""
+    return f"{valor:.1f}".replace(".", ",")
 
 
 def _estilo_base(fig, altura, margem_baixo=10):
@@ -150,6 +155,48 @@ def linha_letalidade_hora(por_hora, media):
     return _estilo_base(fig, 380)
 
 
+def barras_mortes_dia(dias):
+    """Mortes em cada dia do período, separando dias úteis de fins de semana e feriados."""
+    dados = dias.reset_index()
+    dia_semana = dados["data"].dt.day_of_week.map(dict(enumerate(DIAS_CURTOS)))
+    dados["dia"] = dados["data"].dt.strftime("%d/%m") + ", " + dia_semana
+    dados["feriado"] = (" · " + dados["feriado"]).where(dados["feriado"] != "", "")
+
+    fig = px.bar(
+        dados,
+        x="data",
+        y="mortos",
+        color="tipo_dia",
+        color_discrete_map={DIA_UTIL: AZUL_8, DIA_FOLGA: AZUL_3},
+        category_orders={"tipo_dia": [DIA_UTIL, DIA_FOLGA]},
+        custom_data=["dia", "acidentes", "feriado"],
+    )
+    fig.update_traces(hovertemplate="<b>%{customdata[0]}</b>%{customdata[2]}<br>%{y} mortos"
+                                    "<br>%{customdata[1]:,} acidentes<extra></extra>")
+
+    # média de mortes por dia de cada grupo: linha tracejada no gráfico e valor na legenda
+    medias = dias.groupby("tipo_dia")["mortos"].mean()
+    for media in medias:
+        fig.add_hline(y=media, line=dict(color=AZUL_1, width=1.2, dash="dash"))
+    fig.for_each_trace(lambda barras: barras.update(
+        name=f"{barras.name} · média de {fmt_dec(medias[barras.name])} mortes"))
+
+    # destaque no dia com mais mortes, se ele for único (em recortes pequenos o "pior dia" seria só ruído)
+    maximo = int(dias["mortos"].max())
+    if dias["mortos"].sum() >= AMOSTRA_MINIMA and (dias["mortos"] == maximo).sum() == 1:
+        pior = dias["mortos"].idxmax()
+        fig.add_annotation(x=pior, y=maximo, text=f"<b>{pior:%d/%m}: {maximo} mortes</b>",
+                           ax=-50 if pior > dias.index[len(dias) * 2 // 3] else 50, ay=-22,
+                           arrowhead=0, arrowwidth=1.5, arrowcolor=DESTAQUE,
+                           font=dict(color=AZUL_1, size=12), bgcolor="rgba(255,255,255,0.85)")
+
+    meio_do_mes = dias.index[dias.index.day == 15]  # nome do mês no meio de cada mês
+    fig.update_xaxes(title=None, tickvals=meio_do_mes, ticktext=[MESES[d.month] for d in meio_do_mes], showgrid=False)
+    fig.update_yaxes(title="Mortes por dia", gridcolor=GRADE, zerolinecolor=GRADE, range=[0, max(maximo * 1.3, 1)])
+    fig.update_layout(bargap=0.15, legend=dict(title=None, orientation="h", x=0, y=1.02, yanchor="bottom"))
+    return _estilo_base(fig, 280)
+
+
 # --------- COMO? E ONDE? --------------------
 def barras_ranking(tabela, metrica, media, top=None):
     """Ranking em barras horizontais pela métrica escolhida no widget.
@@ -173,7 +220,6 @@ def barras_ranking(tabela, metrica, media, top=None):
         y="rotulo",
         orientation="h",
         color="grupo",
-        text="texto",
         color_discrete_map={GRUPO_CRITICO: AZUL_1, GRUPO_DEMAIS: AZUL_8},
         category_orders={"rotulo": list(dados["rotulo"]), "grupo": [GRUPO_CRITICO, GRUPO_DEMAIS]},
         custom_data=[categoria, "acidentes", "mortos", "letalidade"],
@@ -203,7 +249,7 @@ def barras_ranking(tabela, metrica, media, top=None):
     fig.update_yaxes(title=None)
     fig.update_layout(
         bargap=0.35,
-        showlegend=bool(dados["grupo"].nunique() > 1),
+        showlegend=bool((dados["grupo"] == GRUPO_CRITICO).any()),  # a legenda só explica algo se houver barra escura
         legend=dict(title=None, orientation="h", x=0, y=1.1, yanchor="bottom"),
     )
     fig = _estilo_base(fig, 100 + 28 * len(dados), margem_baixo=30)
@@ -248,3 +294,38 @@ def mapa_densidade(df, so_com_morte=False):
     _estilo_base(fig, 600)
     fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
     return fig
+
+
+# --------- EM QUE CONDIÇÕES? --------------------
+def barras_participacao(tabela):
+    """% dos acidentes x % das mortes de cada categoria, na ordem da tabela (ver dados.participacao_por)."""
+    detalhes = tabela[["acidentes", "mortos", "letalidade"]].to_numpy()
+
+    fig = go.Figure()
+    for coluna, nome, cor in [("pct_acidentes", "% dos acidentes", AZUL_8), ("pct_mortos", "% das mortes", AZUL_1)]:
+        fig.add_trace(go.Bar(
+            x=tabela[coluna],
+            y=tabela.index,
+            name=nome,
+            orientation="h",
+            marker=dict(color=cor, cornerradius=4),
+            text=tabela[coluna].map(fmt_pct),
+            textposition="outside",
+            constraintext="none",  # sem isso o Plotly encolhe o texto até a espessura da barra
+            cliponaxis=False,
+            textfont=dict(color=AZUL_1, size=12),
+            customdata=detalhes,
+            hovertemplate=(f"<b>%{{y}}</b><br>{nome}: %{{x:.1f}}%<br>%{{customdata[0]:,}} acidentes · "
+                           "%{customdata[1]:,} mortos<br>%{customdata[2]:.1f}% com morte<extra></extra>"),
+        ))
+
+    fig.update_xaxes(visible=False, range=[0, tabela[["pct_acidentes", "pct_mortos"]].to_numpy().max() * 1.2])
+    # eixo invertido: 1ª categoria no topo e, em cada par, acidentes acima de mortes (como na legenda)
+    fig.update_yaxes(title=None, autorange="reversed", categoryorder="array", categoryarray=list(tabela.index))
+    fig.update_layout(
+        barmode="group",
+        bargap=0.28,
+        bargroupgap=0.06,
+        legend=dict(title=None, orientation="h", x=0, y=1.0, yanchor="bottom"),
+    )
+    return _estilo_base(fig, 90 + 64 * len(tabela))

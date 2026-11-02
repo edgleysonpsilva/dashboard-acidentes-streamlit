@@ -8,7 +8,7 @@ Dashboard interativo sobre os acidentes registrados pela Polícia Rodoviária Fe
 **Análise e Visualização de Dados (CESAR School)**
 Aluno: Edgleyson Pereira da Silva
 
-🔗 **App publicado:** https://atividade-3-dashboard-app-j2ljrtduh2r7amzpzy37h6.streamlit.app/
+🔗 **App publicado:** acidentes-prf-2026.streamlit.app/
 ---
 
 ## 💡 Insights

@@ -14,7 +14,7 @@ from dados import AMOSTRA_MINIMA, DIA_FOLGA, DIA_UTIL, MESES, pico_semana_hora
 AZUL_1 = "#05132A"
 AZUL_2 = "#0B2859"
 AZUL_3 = "#10408D"
-AZUL_4 = "#195AB4"  
+AZUL_4 = "#195AB4"
 AZUL_5 = "#307AE0"
 AZUL_6 = "#549CFF"
 AZUL_7 = "#6BAAFF"
@@ -118,7 +118,7 @@ def linha_letalidade_hora(por_hora, media):
     fig.add_hline(y=media, line=dict(color=DESTAQUE, width=1.5, dash="dash"), layer="above",
                   annotation_text=f"média do recorte: {fmt_pct(media)}",
                   annotation_position="top right", annotation_font=dict(color=DESTAQUE, size=12))
-
+                  
     fig.add_trace(go.Scatter(
         x=por_hora.index,
         y=por_hora["letalidade"],

@@ -14,7 +14,7 @@ from dados import AMOSTRA_MINIMA, DIA_FOLGA, DIA_UTIL, MESES, pico_semana_hora
 AZUL_1 = "#05132A"
 AZUL_2 = "#0B2859"
 AZUL_3 = "#10408D"
-AZUL_4 = "#195AB4"
+AZUL_4 = "#195AB4"  
 AZUL_5 = "#307AE0"
 AZUL_6 = "#549CFF"
 AZUL_7 = "#6BAAFF"

@@ -115,9 +115,9 @@ def linha_letalidade_hora(por_hora, media):
     fig.add_vrect(x0=-0.5, x1=5.5, fillcolor=AZUL_10, opacity=0.45, line_width=0, layer="below",
                   annotation_text="madrugada", annotation_position="top left",
                   annotation_font=dict(color=CINZA, size=12))
-    fig.add_hline(y=media, line=dict(color=AZUL_3, width=1.2, dash="dash"),
+    fig.add_hline(y=media, line=dict(color=DESTAQUE, width=1.5, dash="dash"), layer="above",
                   annotation_text=f"média do recorte: {fmt_pct(media)}",
-                  annotation_position="top right", annotation_font=dict(color=AZUL_3, size=12))
+                  annotation_position="top right", annotation_font=dict(color=DESTAQUE, size=12))
 
     fig.add_trace(go.Scatter(
         x=por_hora.index,
@@ -174,10 +174,12 @@ def barras_mortes_dia(dias):
     fig.update_traces(hovertemplate="<b>%{customdata[0]}</b>%{customdata[2]}<br>%{y} mortos"
                                     "<br>%{customdata[1]:,} acidentes<extra></extra>")
 
-    # média de mortes por dia de cada grupo: linha tracejada no gráfico e valor na legenda
+    # média de mortes por dia de cada grupo: linha tracejada vermelha por cima das barras
     medias = dias.groupby("tipo_dia")["mortos"].mean()
     for media in medias:
-        fig.add_hline(y=media, line=dict(color=AZUL_1, width=1.2, dash="dash"))
+        fig.add_hline(y=media, line=dict(color=DESTAQUE, width=1.5, dash="dash"), layer="above")
+        fig.add_annotation(x=1, y=media, xref="paper", yref="y", xanchor="left", showarrow=False,
+                           text=f"<b>média {fmt_dec(media)}</b>", font=dict(color=DESTAQUE, size=12))
     fig.for_each_trace(lambda barras: barras.update(
         name=f"{barras.name} · média de {fmt_dec(medias[barras.name])} mortes"))
 
@@ -194,7 +196,9 @@ def barras_mortes_dia(dias):
     fig.update_xaxes(title=None, tickvals=meio_do_mes, ticktext=[MESES[d.month] for d in meio_do_mes], showgrid=False)
     fig.update_yaxes(title="Mortes por dia", gridcolor=GRADE, zerolinecolor=GRADE, range=[0, max(maximo * 1.3, 1)])
     fig.update_layout(bargap=0.15, legend=dict(title=None, orientation="h", x=0, y=1.02, yanchor="bottom"))
-    return _estilo_base(fig, 280)
+    fig = _estilo_base(fig, 280)
+    fig.update_layout(margin=dict(r=90))
+    return fig
 
 
 # --------- COMO? E ONDE? --------------------
@@ -239,12 +243,12 @@ def barras_ranking(tabela, metrica, media, top=None):
                            font=dict(color=AZUL_1, size=12))
 
     if metrica == "letalidade":
-        fig.add_vline(x=media, line=dict(color=AZUL_3, width=1.2, dash="dash"), layer="below")
+        fig.add_vline(x=media, line=dict(color=DESTAQUE, width=1.5, dash="dash"), layer="above")
         # rótulo acima do gráfico, fora da área das barras
         fig.add_annotation(x=media, y=1, xref="x", yref="paper", yanchor="bottom",
-                           text=f"média {fmt_pct(media)}", showarrow=False,
-                           font=dict(color=AZUL_3, size=12))
-
+                           text=f"<b>média {fmt_pct(media)}</b>", showarrow=False,
+                           font=dict(color=DESTAQUE, size=12))
+                           s
     fig.update_xaxes(visible=False, range=[0, limite_x])
     fig.update_yaxes(title=None)
     fig.update_layout(

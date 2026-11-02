@@ -248,7 +248,7 @@ def barras_ranking(tabela, metrica, media, top=None):
         fig.add_annotation(x=media, y=1, xref="x", yref="paper", yanchor="bottom",
                            text=f"<b>média {fmt_pct(media)}</b>", showarrow=False,
                            font=dict(color=DESTAQUE, size=12))
-                           s
+
     fig.update_xaxes(visible=False, range=[0, limite_x])
     fig.update_yaxes(title=None)
     fig.update_layout(
